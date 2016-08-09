@@ -1,0 +1,1 @@
+cmd_/home/bing/github/modules/usermode_helper/usermodehelper.ko := ld -r -m elf_i386 -T ./scripts/module-common.lds --build-id  -o /home/bing/github/modules/usermode_helper/usermodehelper.ko /home/bing/github/modules/usermode_helper/usermodehelper.o /home/bing/github/modules/usermode_helper/usermodehelper.mod.o
