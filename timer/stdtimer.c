@@ -5,31 +5,35 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("wbl");
 
+static int num = 0;
 static struct timer_list my_timer;
 
 void my_timer_callback(unsigned long data)
 {
+	int num = *(int*)data;
 	int result = 0;
-	printk("my_timer_callback data %ld\n", data);
+	printk("my_timer_callback called %d times\n", ++num);
 	printk("my_timer_callback called (%ld)\n", jiffies);
 	result = mod_timer(&my_timer, jiffies + msecs_to_jiffies(5000));
+	*(int*)data = num;
 	if (result) printk("Error in mod_timer\n");
 }
 
 int timer_init_module(void)
 {
-	int ret;
-	
 	printk("Timer module installing\n");
 
-	setup_timer(&my_timer, my_timer_callback, 123);
+	setup_timer(&my_timer, my_timer_callback, (unsigned long)&num);
 
 	printk("Starting timer to fire in 5000ms (%ld)\n", jiffies);
 
-	ret = mod_timer(&my_timer, jiffies + msecs_to_jiffies(5000));
-
-	if (ret) printk("Error in mod_timer\n");
-
+	/* both ok */
+#if 1
+	mod_timer(&my_timer, jiffies + msecs_to_jiffies(5000));
+#else
+	my_timer.expires = jiffies + msecs_to_jiffies(5000);
+	add_timer(&my_timer); 
+#endif
 	return 0;
 }
 
