@@ -117,11 +117,10 @@ int ioctl_setpara_mon(struct net_device *dev, struct iw_request_info *info,
     int param = i[0];
     int value = i[1];
 
-    printk("[%s %d] info->cmd 0x%x, info->flags %d\n", __func__, __LINE__, info->cmd, info->flags); 
+    printk("[%s %d]param 0x%x, value %d\n", __func__, __LINE__, param, value); 
     switch (param) {
         case IOCTL_MON_SET_MAXSTA:
             g_maxsta = value; /* maybe we need a mutex lock and validation check */
-            printk("[%s %d] set max sta %d\n", __func__, __LINE__, g_maxsta); 
             break;
         default:
             return -EOPNOTSUPP;
@@ -135,7 +134,7 @@ int ioctl_getpara_mon(struct net_device *dev, struct iw_request_info *info,
 {
     int *param = (int*)extra;
 
-    printk("[%s %d] info->cmd 0x%x, info->flags %d\n", __func__, __LINE__, info->cmd, info->flags); 
+    printk("[%s %d]param[0] 0x%x\n", __func__, __LINE__, param[0]); 
     switch (param[0]) {
         case IOCTL_MON_GET_MAXSTA:
             param[0] = g_maxsta;
@@ -163,7 +162,6 @@ int ioctl_char128_mon(struct net_device *dev, struct iw_request_info *info,
     copy_from_user(s, u->data.pointer, u->data.length);
     s[IOCTL_CHAR128 - 1] = '\0';
 
-    printk("[%s %d] info->cmd 0x%x, info->flags %d\n", __func__, __LINE__, info->cmd, info->flags); 
     printk("[%s %d] flags 0x%x, datalen %d\n", __func__, __LINE__, u->data.flags, len); 
 
     /* dump_stack(); */

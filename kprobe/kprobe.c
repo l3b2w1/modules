@@ -13,17 +13,19 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/kprobes.h>
+#include <linux/wireless.h>
 #include <net/iw_handler.h>
+#include <linux/netdevice.h>
 
 #define JPROBE_DEFINE(func)        \
 {                                  \
-    .entry = func##_entry,         \
+    .entry = func##_jentry,         \
     .kp = {                        \
         .symbol_name = #func   \
     },                             \
 }
 
-static long do_fork_entry(unsigned long clone_flags, unsigned long stack_start,
+static long do_fork_jentry(unsigned long clone_flags, unsigned long stack_start,
 	      struct pt_regs *regs, unsigned long stack_size,
 	      int __user *parent_tidptr, int __user *child_tidptr)
 {
@@ -36,20 +38,36 @@ static long do_fork_entry(unsigned long clone_flags, unsigned long stack_start,
 	return 0;
 }
 
-int ioctl_private_call_entry(struct net_device *dev, struct iwreq *iwr,
+int ioctl_private_call_jentry(struct net_device *dev, struct iwreq *iwr,
         unsigned int cmd, struct iw_request_info *info,
         iw_handler handler)
 {
-    printk("[%s %d] cmd 0x%x, info->cmd 0x%x\n", __func__, __LINE__, cmd, info->cmd); 
+    int i;
 
+    if (cmd == 0x8be1 || cmd == 0x8be0 || cmd == 0x8be2) {
+        printk("[%s %d]cmd 0x%x,  num_private_args %d\n", __func__, __LINE__, cmd, dev->wireless_handlers->num_private_args); 
+        for (i = 0; i < dev->wireless_handlers->num_private_args; i++)
+            printk("[%s %d] i %d, cmd 0x%x\n", __func__, __LINE__, i, dev->wireless_handlers->private_args[i].cmd); 
+    }
+
+    if (cmd == 0x8be1 || cmd == 0x8be0 || cmd == 0x8be2) {
+        printk("[%s %d]cmd 0x%x,  num_private_args %d\n", __func__, __LINE__, cmd, dev->wireless_handlers->num_private_args); 
+        for (i = 0; i < dev->wireless_handlers->num_private_args; i++) {
+            if (cmd == dev->wireless_handlers->private_args[i].cmd) {
+                printk("[%s %d] break: i %d, cmd 0x%x\n", __func__, __LINE__, i, dev->wireless_handlers->private_args[i].cmd); 
+                break;
+            }
+        }
+    }
 	/* Always end with a call to jprobe_return(). */
     jprobe_return();
     return 0;
 }
 
-static int wext_handle_ioctl_entry(struct net *net, struct ifreq *ifr, unsigned int cmd, void __user *arg)
+static int wext_handle_ioctl_jentry(struct net *net, struct ifreq *ifr, unsigned int cmd, void __user *arg)
 {
-    printk("[%s %d] cmd 0x%x\n", __func__, __LINE__, cmd); 
+    if (cmd == 0x8be1 || cmd == 0x8be0 || cmd == 0x8be2)
+        printk("[%s %d] cmd 0x%x\n", __func__, __LINE__, cmd); 
 
 	/* Always end with a call to jprobe_return(). */
     jprobe_return();
@@ -57,7 +75,7 @@ static int wext_handle_ioctl_entry(struct net *net, struct ifreq *ifr, unsigned 
 }
 
 /* 函数原型定义为static类型，所以register 会失败 */
-static int get_priv_descr_and_size_entry(struct net_device *dev, unsigned int cmd, const struct iw_priv_args **descrp)
+static int get_priv_descr_and_size_jentry(struct net_device *dev, unsigned int cmd, const struct iw_priv_args **descrp)
 {
     printk("[%s %d] cmd 0x%x\n", __func__, __LINE__, cmd); 
     jprobe_return();
@@ -159,7 +177,6 @@ static int __init kprobe_init(void)
 	printk(KERN_INFO "Planted kprobe at %p\n", kp.addr);
 #endif
 
-	printk(KERN_INFO "Planted kprobe\n");
     jprobe_init();
     
 	return 0;
@@ -167,9 +184,9 @@ static int __init kprobe_init(void)
 
 static void __exit kprobe_exit(void)
 {
-	/* unregister_kprobe(&kp); */
+    /* unregister_kprobe(&kp); */
     jprobe_exit();
-	printk(KERN_INFO "kprobe unregistered\n");
+	printk(KERN_INFO "kprobe at unregistered\n", kp.addr);
 }
 
 module_init(kprobe_init)
