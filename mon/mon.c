@@ -36,7 +36,8 @@ struct dev_mon_private {
 
 enum {
 	IOCTL_MON_HELLO = 0x11,
-	IOCTL_MON_WORLD,
+    IOCTL_MON_SET_LOVER,
+    IOCTL_MON_GET_LOVER,
     IOCTL_MON_SET_MAXSTA,
     IOCTL_MON_GET_MAXSTA,
 };
@@ -46,6 +47,8 @@ enum {
  * iwpriv mon hello helloworld
  * iwpriv mon setmaxsta 123
  * iwpriv mon getmaxsta
+ * iwpriv mon setlover lover
+ * iwpriv mon getlover
  *
  */
 
@@ -79,7 +82,8 @@ static const struct iw_priv_args priv_args_mon[] = {
     {IOCTL_CHAR128_MON, IW_PRIV_TYPE_CHAR | 128, IW_HEADER_TYPE_CHAR | 128, ""},
     /* sub-ioctl end */
     {IOCTL_MON_HELLO, IW_PRIV_TYPE_CHAR | 128, IW_HEADER_TYPE_CHAR | 128, "hello"},
-    {IOCTL_MON_WORLD, IW_PRIV_TYPE_CHAR | 128, IW_HEADER_TYPE_CHAR | 128, "world"},
+    {IOCTL_MON_SET_LOVER, IW_PRIV_TYPE_CHAR | 128, IW_HEADER_TYPE_CHAR | 128, "setlover"},
+    {IOCTL_MON_GET_LOVER, IW_PRIV_TYPE_CHAR | 128, IW_HEADER_TYPE_CHAR | 128, "getlover"},
     {IOCTL_MON_SET_MAXSTA, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "setmaxsta"},
     {IOCTL_MON_GET_MAXSTA, 0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "getmaxsta"},
 };
@@ -101,11 +105,6 @@ void mon_hello_handler(char *msg, int len)
     return;
 }
 
-void mon_world_handler(char *msg, int len)
-{
-    printk("[%s %d] world: %s\n", __func__, __LINE__, msg); 
-    return;
-}
 
 static int g_maxsta = 1;
 
@@ -146,11 +145,30 @@ int ioctl_getpara_mon(struct net_device *dev, struct iw_request_info *info,
     return 0;
 }
 
+#define IOCTL_CHAR128 128
+
+static char g_lover[32] = {0};
+
+void set_lover(const char *buf)
+{
+    memcpy(g_lover, buf, sizeof(g_lover));
+    printk("[%s %d] set lover %s\n", __func__, __LINE__, g_lover); 
+    return;
+}
+
+int get_lover(char *buf)
+{
+    memcpy(buf, g_lover, sizeof(g_lover));
+    buf[IOCTL_CHAR128 - 1] = '\0';
+    printk("[%s %d] get lover %s\n", __func__, __LINE__, g_lover); 
+    return 0;
+}
+
 int ioctl_char128_mon(struct net_device *dev, struct iw_request_info *info,
 			  union iwreq_data *wrqu, char *extra)
 {
-#define IOCTL_CHAR128 128
     char *s = NULL;
+    int ret = 0;
     union iwreq_data *u = wrqu;
     int len = u->data.length;
 
@@ -169,8 +187,15 @@ int ioctl_char128_mon(struct net_device *dev, struct iw_request_info *info,
         case IOCTL_MON_HELLO:
             mon_hello_handler(u->data.pointer, len);
             break;
-        case IOCTL_MON_WORLD:
-            mon_world_handler(u->data.pointer, len);
+        case IOCTL_MON_SET_LOVER:
+            set_lover(s);
+            break;
+        case IOCTL_MON_GET_LOVER:
+            {
+                get_lover(s);
+                u->data.length = strlen(s) + 1;
+                ret = (copy_to_user(u->data.pointer, s, u->data.length)) ? -EFAULT : 0;
+            }
             break;
         default:
             printk("[%s %d] unknown command\n", __func__, __LINE__); 
@@ -178,7 +203,7 @@ int ioctl_char128_mon(struct net_device *dev, struct iw_request_info *info,
     }
 
     kfree(s);
-    return 0;
+    return ret;
 }
 
 static const iw_handler ioctl_handlers_mon[] = {
