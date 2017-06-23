@@ -206,6 +206,13 @@ int ioctl_char128_mon(struct net_device *dev, struct iw_request_info *info,
     return ret;
 }
 
+//自定义中断处理函数
+static irqreturn_t irq_handler(int data,void *dev_id)
+{
+    printk("mon[%d] interrupt handler\n", data);
+    return IRQ_NONE;
+}
+
 static const iw_handler ioctl_handlers_mon[] = {
     (iw_handler) NULL,
 };
@@ -213,12 +220,13 @@ static const iw_handler ioctl_handlers_mon[] = {
 
 struct net_device *dev_mon = NULL;
 struct net_device_ops mon_ops;
+int irq = 16;
 
 int create_dev_mon(void)
 {
 	struct net_device *dev;
 	struct dev_mon_private *pri;
-	int rc;
+	int rc, ret = 0;
 	int i;
 
 	dev = dev_get_by_name(&init_net, "mon");
@@ -233,7 +241,7 @@ int create_dev_mon(void)
 
 	if (!dev) {
         printk("[%s %d] alloc_etherdev failed\n", __func__, __LINE__); 
-		return -1;
+		return 0;
     }
 
 	pri = (struct dev_mon_private *) netdev_priv(dev);
@@ -250,6 +258,11 @@ int create_dev_mon(void)
 	rc = register_netdev(dev);
 	dev_mon = dev;
     printk("[%s %d] register mon\n", __func__, __LINE__); 
+
+    ret = request_irq(irq, irq_handler, IRQF_SHARED, dev->name, dev);
+    if (ret) {
+        printk("[%s %d] request_irq failure\n", __func__, __LINE__); 
+    }
     return 0;
 }
 
@@ -262,6 +275,7 @@ void delete_dev_mon(void)
         return;
 
     unregister_netdev(dev);
+    free_irq(irq, dev);
     dev_mon = NULL;
     printk("[%s %d] unregister mon\n", __func__, __LINE__); 
     return;
