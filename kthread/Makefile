@@ -14,8 +14,7 @@ EXTRA_CFLAGS += $(DEBFLAGS) -I$(LDDINC)
 
 ifneq ($(KERNELRELEASE),)
 
-obj-m	:= mythread.o 
-
+obj-m	:= mythread.o kthread_sema.o
 
 else
 
