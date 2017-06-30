@@ -11,6 +11,7 @@
 #include <net/netlink.h>
 #include <net/netns/generic.h>
 #include <net/netlink.h>
+#include <linux/if_arp.h>
 #include <linux/slab.h>
 #include <linux/netfilter_bridge.h>
 #include <linux/tty.h>
@@ -209,7 +210,7 @@ int ioctl_char128_mon(struct net_device *dev, struct iw_request_info *info,
 //自定义中断处理函数
 static irqreturn_t irq_handler(int data,void *dev_id)
 {
-    printk("mon[%d] interrupt handler\n", data);
+    printk("mon[%d] interrupt handler\n", data); 
     return IRQ_NONE;
 }
 
@@ -219,7 +220,14 @@ static const iw_handler ioctl_handlers_mon[] = {
 
 
 struct net_device *dev_mon = NULL;
-struct net_device_ops mon_ops;
+
+struct net_device_ops mon_ops = {
+    .ndo_open = NULL,
+    .ndo_stop = NULL,
+    .ndo_do_ioctl = NULL,
+    .ndo_start_xmit = NULL,
+};
+
 int irq = 16;
 
 int create_dev_mon(void)
@@ -251,11 +259,21 @@ int create_dev_mon(void)
 	for (i = 0; i < 6; i++)
 		dev->dev_addr[i] = i;
 
+    ether_setup(dev);
 	dev->destructor = free_netdev;
-	memset(&mon_ops, 0, sizeof(struct net_device_ops));
 	dev->netdev_ops = &mon_ops;
+	dev->mtu		= (16 * 1024) + 20 + 20 + 12;
+	dev->hard_header_len 	= ETH_HLEN;
+	dev->addr_len		= ETH_ALEN;
+	dev->tx_queue_len	= 0;
+	dev->flags		= IFF_BROADCAST|IFF_MULTICAST;
+    dev->type = ARPHRD_IEEE80211_PRISM;
     dev->wireless_handlers = &iw_handler_def_mon;
+
+	memset(dev->broadcast, 0xFF, ETH_ALEN);
+
 	rc = register_netdev(dev);
+
 	dev_mon = dev;
     printk("[%s %d] register mon\n", __func__, __LINE__); 
 
