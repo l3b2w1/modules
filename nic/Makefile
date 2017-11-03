@@ -1,5 +1,5 @@
-
-obj-m += nic.o
+# obj-m += nic.o
+obj-m += skb.o
 
 KERNELDIR := /lib/modules/$(shell uname -r)/build
 PWD=$(shell pwd)

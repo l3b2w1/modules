@@ -15,10 +15,10 @@ char payload[] = "i want to send a packet within kernel";
 
 /* blue 44:37:e6:a6:d6:e0 */
 /* linux   d4:3d:7e:12:49:06 */
-unsigned char srcmac[ETH_ALEN]= {0xd4,0x3d,0x7e, 0x12, 0x49, 0x06};  
-unsigned char dstmac[ETH_ALEN] = {0x44,0x37,0xe6, 0xa6, 0xd6, 0xe0};  
-unsigned char srcip[4] = {10,0,3,58};  
-unsigned char dstip[4] = {10,0,1,199};  
+unsigned char dstmac[ETH_ALEN]= {0xd4,0x3d,0x7e, 0x12, 0x49, 0x06};  
+unsigned char srcmac[ETH_ALEN] = {0x44,0x37,0xe6, 0xa6, 0xd6, 0xe0};  
+unsigned char dstip[4] = {10,0,3,58};  
+unsigned char srcip[4] = {10,0,1,199};  
 uint32_t sip = 0;
 uint32_t dip = 0;
 
@@ -110,10 +110,9 @@ int create_new_skb(void)
     memcpy(eh->h_source, srcmac, ETH_ALEN);
     printk("PSH truesize %4d, len %4d, data %p, tail %p, head %p, end %p, mac_header %p\n", skb->truesize, skb->len, skb->data, skb->tail, skb->head, skb->end, skb->mac_header); 
 
-    /* if ((ret = dev_queue_xmit(skb)) < 0) */
-        /* goto out; */
+    if ((ret = dev_queue_xmit(skb)) < 0)
+        goto out;
     printk("[%s %d] ret %d\n", __func__, __LINE__, ret); 
-    consume_skb(skb);  
     dev_put(dev);
     return 0;
 
