@@ -1,0 +1,5 @@
+after loading modules/nic/skb.ko and execute dmesg, then show
+
+"protocol 0800 is buggy, dev eth0"
+
+i still do not know the reason
