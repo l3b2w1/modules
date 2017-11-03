@@ -25,7 +25,6 @@ uint32_t dip = 0;
 #define SPORT	5320
 #define DPORT	5321
 
-
 uint64_t fakeid = 0;
 uint64_t seq = 0;
 uint64_t ack_seq = 0;
@@ -46,11 +45,8 @@ int create_new_skb(void)
         printk("[%s %d] get dev eth0  failed\n", __func__, __LINE__); 
         return -1;
     }
-    printk("[%s %d] we get dev eth0 success\n", __func__, __LINE__); 
     
-    len = sizeof(payload) + LL_RESERVED_SPACE(dev) + sizeof(struct iphdr) + sizeof(struct tcphdr);
-
-    printk("[%s %d] len %d\n", __func__, __LINE__, len); 
+    len = sizeof(payload) + LL_RESERVED_SPACE(dev) + sizeof(struct iphdr) + sizeof(struct tcphdr) + dev->needed_tailroom;
 
     skb = alloc_skb(len, GFP_ATOMIC);
     if (!skb) {
@@ -58,41 +54,34 @@ int create_new_skb(void)
         return -ENOMEM;
     }
 
-    printk("[%s %d] alloc_skb ok\n", __func__, __LINE__); 
-
-    printk("ORI truesize %4d, len %4d, data %p, tail %p, head %p, end %p, mac_header %p\n", skb->truesize, skb->len, skb->data, skb->tail, skb->head, skb->end, skb->mac_header); 
-
-    skb_reserve(skb, LL_RESERVED_SPACE(dev));
-    printk("RSV truesize %4d, len %4d, data %p, tail %p, head %p, end %p, mac_header %p\n", skb->truesize, skb->len, skb->data, skb->tail, skb->head, skb->end, skb->mac_header); 
-
     skb->dev = dev;
     skb->pkt_type = PACKET_OTHERHOST;
     skb->protocol = __constant_htons(ETH_P_IP);
     skb->ip_summed = CHECKSUM_NONE;
     skb->priority = 0;
 
+    skb_reserve(skb, LL_RESERVED_SPACE(dev));
+    skb_reset_network_header(skb);
+
     ih = (struct iphdr *)skb_put(skb, sizeof(struct iphdr));
     ih->version = 4;
     ih->ihl = sizeof(struct iphdr) >> 2;
     ih->frag_off = 0;
-    ih->protocol = IPPROTO_IP;
+    ih->protocol = IPPROTO_TCP;
     ih->tos = 0;
     memcpy(&sip, srcip, sizeof(srcip));
     memcpy(&dip, dstip, sizeof(dstip));
     ih->saddr = sip;
     ih->daddr = dip;
-    ih->ttl = 0x40;
-    ih->tot_len = __constant_htons(skb->len);
+    ih->ttl = 0x20;
+    ih->tot_len = __constant_htons(sizeof(payload) + sizeof(struct iphdr) + sizeof(struct tcphdr));
     ih->check = 0;
 
     th = (struct tcphdr *)skb_put(skb, sizeof(struct tcphdr));
-    th->source = SPORT;
-    th->dest = DPORT;
+    th->source = htons(SPORT);
+    th->dest = htons(DPORT);
     th->seq = seq++;
     th->ack_seq = ack_seq;
-    th->psh = 1;
-    th->fin = 1;
-    th->syn = 1;
     th->doff = 5;
     th->window = __constant_htons(5840);
     th->check = 0;
@@ -102,17 +91,14 @@ int create_new_skb(void)
 
     pdata = skb_put(skb, sizeof(payload));
     memcpy(pdata, payload, sizeof(payload));
-    printk("PUT truesize %4d, len %4d, data %p, tail %p, head %p, end %p,  mac_header %p\n", skb->truesize, skb->len, skb->data, skb->tail, skb->head, skb->end, skb->mac_header); 
 
     eh = skb_push(skb, 14);
     eh->h_proto = __constant_htons(ETH_P_IP);
     memcpy(eh->h_dest, dstmac, ETH_ALEN);
     memcpy(eh->h_source, srcmac, ETH_ALEN);
-    printk("PSH truesize %4d, len %4d, data %p, tail %p, head %p, end %p, mac_header %p\n", skb->truesize, skb->len, skb->data, skb->tail, skb->head, skb->end, skb->mac_header); 
 
     if ((ret = dev_queue_xmit(skb)) < 0)
         goto out;
-    printk("[%s %d] ret %d\n", __func__, __LINE__, ret); 
     dev_put(dev);
     return 0;
 
