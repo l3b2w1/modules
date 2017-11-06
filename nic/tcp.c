@@ -34,7 +34,6 @@ int create_new_skb(void)
     int ret = -1, len = 0;
     struct ethhdr *eh = 0;  
     struct iphdr *ih = 0;  
-    struct udphdr *uh = 0;
     struct tcphdr *th = 0;
     struct net_device *dev = 0;
     struct sk_buff *skb = NULL;
@@ -92,7 +91,7 @@ int create_new_skb(void)
     pdata = skb_put(skb, sizeof(payload));
     memcpy(pdata, payload, sizeof(payload));
 
-    eh = skb_push(skb, 14);
+    eh = (struct ethhdr*)skb_push(skb, 14);
     eh->h_proto = __constant_htons(ETH_P_IP);
     memcpy(eh->h_dest, dstmac, ETH_ALEN);
     memcpy(eh->h_source, srcmac, ETH_ALEN);

@@ -75,21 +75,21 @@ unsigned int nic_hook_post_routing(const struct nf_hook_ops *ops,
 static struct nf_hook_ops nic_hooks[] = {
     {
         .hook       =   nic_hook_local_out,
-        .owner      =   THIS_MODULE,
+        /* .owner      =   THIS_MODULE, */
         .pf         =   PF_INET,
         .hooknum    =   NF_INET_LOCAL_OUT,
         /* .priority   =   NF_IP_PRI_FIRST, */
     },
     {
         .hook       =   nic_hook_pre_routing,
-        .owner      =   THIS_MODULE,
+        /* .owner      =   THIS_MODULE, */
         .pf         =   PF_INET,
         .hooknum    =   NF_INET_PRE_ROUTING,
         /* .priority   =   NF_IP_PRI_FIRST, */
     },
     {
         .hook       =   nic_hook_post_routing,
-        .owner      =   THIS_MODULE,
+        /* .owner      =   THIS_MODULE, */
         .pf         =   PF_INET,
         .hooknum    =   NF_INET_POST_ROUTING,
         /* .priority   =   NF_IP_PRI_FIRST, */

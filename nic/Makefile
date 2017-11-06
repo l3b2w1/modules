@@ -1,5 +1,7 @@
-# obj-m += nic.o
-obj-m += skb.o
+obj-m += nic.o
+obj-m += tcp.o
+obj-m += udp.o
+obj-m += garp.o
 
 KERNELDIR := /lib/modules/$(shell uname -r)/build
 PWD=$(shell pwd)
